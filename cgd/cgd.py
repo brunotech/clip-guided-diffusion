@@ -47,7 +47,7 @@ def clip_guided_diffusion(
     use_magnitude: bool = False, # enables magnitude of the gradient
     progress: bool = True,
 ):
-    if len(device) == 0:
+    if not device:
         device = 'cuda' if th.cuda.is_available() else 'cpu'
         print(f"Using device {device}. You can specify a device manually with `--device/-dev`")
     else:
@@ -59,14 +59,14 @@ def clip_guided_diffusion(
         # just use local vars for config
         wandb_run = wandb.init(project=wandb_project, entity=wandb_entity, config=locals())
     else:
-        print(f"--wandb_project not specified. Skipping W&B integration.")
+        print("--wandb_project not specified. Skipping W&B integration.")
 
     th.manual_seed(seed)
 
-    if use_magnitude == False and image_size == 64:
+    if not use_magnitude and image_size == 64:
         use_magnitude = True
         tqdm.write("Enabling magnitude for 64x64 checkpoints.")
-    
+
     use_saturation = sat_scale != 0
     Path(prefix_path).mkdir(parents=True, exist_ok=True)
     Path(checkpoints_dir).mkdir(parents=True, exist_ok=True)
@@ -98,7 +98,8 @@ def clip_guided_diffusion(
         raise RuntimeError('The weights must not sum to 0.')
     weights /= weights.sum().abs()
 
-    if use_augs: tqdm.write( f"Augmentations enabled." )
+    if use_augs:
+        tqdm.write("Augmentations enabled.")
     make_cutouts = clip_util.MakeCutouts(cut_size=clip_size, num_cutouts=num_cutouts,
                                          cutout_size_power=cutout_power, use_augs=use_augs)
 
@@ -139,10 +140,9 @@ def clip_guided_diffusion(
         x_in = out["pred_xstart"] * fac + x * sigmas
         if wandb_project is not None:
             log[f'Generations - {timestep_respacing}'] = [
-                wandb.Image(x, caption=f"Noisy Sample"),
-                wandb.Image(out['pred_xstart'],
-                            caption=f"Denoised Prediction"),
-                wandb.Image(x_in, caption=f"Blended (what CLIP sees)"),
+                wandb.Image(x, caption="Noisy Sample"),
+                wandb.Image(out['pred_xstart'], caption="Denoised Prediction"),
+                wandb.Image(x_in, caption="Blended (what CLIP sees)"),
             ]
 
         clip_in = clip_util.CLIP_NORMALIZE(make_cutouts(x_in.add(1).div(2)))
@@ -230,12 +230,13 @@ def clip_guided_diffusion(
 
     except (RuntimeError, KeyboardInterrupt) as runtime_ex:
         if "CUDA out of memory" in str(runtime_ex):
-            print(f"CUDA OOM error occurred.")
-            print(
-                f"Try lowering --image_size/-size, --batch_size/-bs, --num_cutouts/-cutn")
+            print("CUDA OOM error occurred.")
+            print("Try lowering --image_size/-size, --batch_size/-bs, --num_cutouts/-cutn")
             print(
                 f"--clip_model/-clip (currently {clip_model_name}) can have a large impact on VRAM usage.")
-            print(f"'RN50' will use the least VRAM. 'ViT-B/32' the second least and is good for its memory/runtime constraints.")
+            print(
+                "'RN50' will use the least VRAM. 'ViT-B/32' the second least and is good for its memory/runtime constraints."
+            )
         else:
             raise runtime_ex
 
@@ -307,11 +308,7 @@ def main():
 
     Path(prefix_path).mkdir(exist_ok=True)
 
-    if len(args.prompts) > 0:
-        prompts = args.prompts.split('|')
-    else:
-        prompts = []
-
+    prompts = args.prompts.split('|') if len(args.prompts) > 0 else []
     if len(args.image_prompts) > 0:
         image_prompts = args.image_prompts.split('|')
     else:

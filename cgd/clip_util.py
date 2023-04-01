@@ -30,7 +30,7 @@ def load_clip(model_name='ViT-B/32', device="cpu"):
         clip_size = clip_model.visual.input_resolution
         return clip_model, clip_size
     else:
-        raise ValueError("Invalid or unspecified device: {}".format(device))
+        raise ValueError(f"Invalid or unspecified device: {device}")
 
 
 def imagenet_top_n(text_encodes, device: str = 'cuda', n: int = len(IMAGENET_CLASSES), clip_model_name: str = "ViT-B/32"):

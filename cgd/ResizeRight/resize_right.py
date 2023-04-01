@@ -113,12 +113,30 @@ def resize(input, scale_factors=None, out_shape=None,
         # We do this by tensor multiplication and broadcasting.
         # if by_convs is true for this dim, then we do this action by
         # convolutions. this is equivalent but faster.
-        if not dim_by_convs:
-            output = apply_weights(output, field_of_view, weights, dim, n_dims,
-                                   pad_sz, pad_mode, fw)
-        else:
-            output = apply_convs(output, scale_factor, in_sz, out_sz, weights,
-                                 dim, pad_sz, pad_mode, fw)
+        output = (
+            apply_convs(
+                output,
+                scale_factor,
+                in_sz,
+                out_sz,
+                weights,
+                dim,
+                pad_sz,
+                pad_mode,
+                fw,
+            )
+            if dim_by_convs
+            else apply_weights(
+                output,
+                field_of_view,
+                weights,
+                dim,
+                n_dims,
+                pad_sz,
+                pad_mode,
+                fw,
+            )
+        )
     return output
 
 
@@ -126,7 +144,7 @@ def get_projected_grid(in_sz, out_sz, scale_factor, fw, by_convs, device=None):
     # we start by having the ouput coordinates which are just integer locations
     # in the special case when usin by_convs, we only need two cycles of grid
     # points. the first and last.
-    grid_sz = out_sz if not by_convs else scale_factor.numerator
+    grid_sz = scale_factor.numerator if by_convs else out_sz
     out_coordinates = fw_arange(grid_sz, fw, device)
 
     # This is projecting the ouput pixel locations in 1d to the input tensor,
@@ -194,8 +212,7 @@ def calc_pad_sz(in_sz, out_sz, field_of_view, projected_grid, scale_factor,
 
         # in the by_convs case pad_sz is a list of left-right pairs. one per
         # each filter
-        pad_sz = [(left_pad, right_pad) for (left_pad, right_pad) in
-                  zip(left_pads, right_pads)]
+        pad_sz = list(zip(left_pads, right_pads))
 
     return pad_sz, projected_grid, field_of_view
 
@@ -354,31 +371,19 @@ def apply_antialiasing_if_needed(interp_method, support_sz, scale_factor,
 
 
 def fw_ceil(x, fw):
-    if fw is numpy:
-        return fw.int_(fw.ceil(x))
-    else:
-        return x.ceil().long()
+    return fw.int_(fw.ceil(x)) if fw is numpy else x.ceil().long()
 
 
 def fw_floor(x, fw):
-    if fw is numpy:
-        return fw.int_(fw.floor(x))
-    else:
-        return x.floor().long()
+    return fw.int_(fw.floor(x)) if fw is numpy else x.floor().long()
 
 
 def fw_cat(x, fw):
-    if fw is numpy:
-        return fw.concatenate(x)
-    else:
-        return fw.cat(x)
+    return fw.concatenate(x) if fw is numpy else fw.cat(x)
 
 
 def fw_swapaxes(x, ax_1, ax_2, fw):
-    if fw is numpy:
-        return fw.swapaxes(x, ax_1, ax_2)
-    else:
-        return x.transpose(ax_1, ax_2)
+    return fw.swapaxes(x, ax_1, ax_2) if fw is numpy else x.transpose(ax_1, ax_2)
 
 
 def fw_pad(x, fw, pad_sz, pad_mode, dim=0):
@@ -392,7 +397,7 @@ def fw_pad(x, fw, pad_sz, pad_mode, dim=0):
         if x.ndim < 3:
             x = x[None, None, ...]
         pad_vec = [0 for _ in range((x.ndim - 2) * 2)]
-        pad_vec[0:2] = pad_sz
+        pad_vec[:2] = pad_sz
         return fw.nn.functional.pad(x.transpose(dim, -1), pad=pad_vec,
                                     mode=pad_mode).transpose(dim, -1)
 

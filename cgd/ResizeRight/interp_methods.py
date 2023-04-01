@@ -38,9 +38,9 @@ def cubic(x):
     absx = fw.abs(x)
     absx2 = absx ** 2
     absx3 = absx ** 3
-    return ((1.5 * absx3 - 2.5 * absx2 + 1.) * to_dtype(absx <= 1.) +
-            (-0.5 * absx3 + 2.5 * absx2 - 4. * absx + 2.) *
-            to_dtype((1. < absx) & (absx <= 2.)))
+    return (1.5 * absx3 - 2.5 * absx2 + 1.0) * to_dtype(absx <= 1.0) + (
+        -0.5 * absx3 + 2.5 * absx2 - 4.0 * absx + 2.0
+    ) * to_dtype((absx > 1.0) & (absx <= 2.0))
 
 
 @support_sz(4)
@@ -60,11 +60,12 @@ def lanczos3(x):
 @support_sz(2)
 def linear(x):
     fw, to_dtype, eps = set_framework_dependencies(x)
-    return ((x + 1) * to_dtype((-1 <= x) & (x < 0)) + (1 - x) *
-            to_dtype((0 <= x) & (x <= 1)))
+    return (x + 1) * to_dtype((x >= -1) & (x < 0)) + (1 - x) * to_dtype(
+        (x >= 0) & (x <= 1)
+    )
 
 
 @support_sz(1)
 def box(x):
     fw, to_dtype, eps = set_framework_dependencies(x)
-    return to_dtype((-1 <= x) & (x < 0)) + to_dtype((0 <= x) & (x <= 1))
+    return to_dtype((x >= -1) & (x < 0)) + to_dtype((x >= 0) & (x <= 1))

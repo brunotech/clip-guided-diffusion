@@ -56,4 +56,5 @@ class ClipGuidedDiffusionPredictor(cog.Predictor):
             init_scale=init_scale,
             seed=seed,
         )
-        for _, batch in enumerate(cgd_generator): yield cog.Path(batch[1]) # second element is the image path, first is the batch index if batch_size > 1
+        for batch in cgd_generator:
+            yield cog.Path(batch[1]) # second element is the image path, first is the batch index if batch_size > 1

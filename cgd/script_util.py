@@ -33,18 +33,18 @@ def check_parameters(
     save_frequency: int,
     noise_schedule: str,
 ):
-    if not (len(prompts) > 0 or len(image_prompts) > 0):
+    if not prompts and not image_prompts:
         raise ValueError("Must provide at least one prompt, text or image.")
-    if not (noise_schedule in ['linear', 'cosine']):
+    if noise_schedule not in {'linear', 'cosine'}:
         raise ValueError('Noise schedule should be one of: linear, cosine')
-    if not (image_size in IMAGE_SIZES):
+    if image_size not in IMAGE_SIZES:
         raise ValueError(f"--image size should be one of {IMAGE_SIZES}")
     if not (0 < save_frequency <= int(timestep_respacing.replace('ddim', ''))):
         raise ValueError(
             "--save_frequency must be greater than 0 and less than `timestep_respacing`")
-    if not (diffusion_steps in DIFFUSION_SCHEDULES):
+    if diffusion_steps not in DIFFUSION_SCHEDULES:
         print('(warning) Diffusion steps should be one of:', DIFFUSION_SCHEDULES)
-    if not (timestep_respacing in TIMESTEP_RESPACINGS):
+    if timestep_respacing not in TIMESTEP_RESPACINGS:
         print(
             f"Pausing run. `timestep_respacing` should be one of {TIMESTEP_RESPACINGS}. CTRL-C if this was a mistake.")
         time.sleep(5)
@@ -53,7 +53,7 @@ def check_parameters(
         assert os.path.isfile(
             clip_model_name), f"{clip_model_name} does not exist"
         print(f"Loading custom model from {clip_model_name}")
-    elif not (clip_model_name in clip_util.CLIP_MODEL_NAMES):
+    elif clip_model_name not in clip_util.CLIP_MODEL_NAMES:
         print(
             f"--clip model name should be one of: {clip_util.CLIP_MODEL_NAMES} unless you are trying to use your own checkpoint.")
         print(f"Loading OpenAI CLIP - {clip_model_name}")
@@ -62,7 +62,7 @@ def check_parameters(
 def parse_prompt(prompt):  # parse a single prompt in the form "<text||img_url>:<weight>"
     if prompt.startswith('http://') or prompt.startswith('https://'):
         vals = prompt.rsplit(':', 2)  # theres two colons, so we grab the 2nd
-        vals = [vals[0] + ':' + vals[1], *vals[2:]]
+        vals = [f'{vals[0]}:{vals[1]}', *vals[2:]]
     else:
         vals = prompt.rsplit(':', 1)  # grab weight after colon
     vals = vals + ['', '1'][len(vals):]  # if no weight, use 1
@@ -98,7 +98,7 @@ def log_image(image: th.Tensor, base_path: str, txts: list, current_step: int, b
     stem = f"{current_step:04}"
     filename = os.path.join(dirname, f'{stem}.png')
     pil_image = tvf.to_pil_image(image.add(1).div(2).clamp(0, 1))
-    pil_image.save(os.path.join(os.getcwd(), f'current.png'))
+    pil_image.save(os.path.join(os.getcwd(), 'current.png'))
     pil_image.save(filename)
     return str(filename)
 
@@ -165,15 +165,15 @@ def load_guided_diffusion(
     diffusion_steps: number of diffusion steps
     timestep_respacing: whether to use timestep-respacing or not
     '''
-    if not (len(device) > 0):
+    if not device:
         raise ValueError("device must be set")
-    if not (noise_schedule in ["linear", "cosine"]):
+    if noise_schedule not in {"linear", "cosine"}:
         raise ValueError("linear_or_cosine must be set")
 
     cond_key = 'cond' if class_cond else 'uncond'
     diffusion_model_info = DIFFUSION_LOOKUP[cond_key][image_size]
     model_config: dict = model_and_diffusion_defaults()
-    model_config.update(diffusion_model_info['model_flags'])
+    model_config |= diffusion_model_info['model_flags']
     model_config.update(**{  # Custom params from user
         'diffusion_steps': diffusion_steps,
         'timestep_respacing': timestep_respacing,
